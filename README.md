@@ -2,14 +2,14 @@
 
 A premium, addictive Sri Lankan news app for Android. Fast, full-screen story cards you swipe through like a feed — no lists, no clutter, just headlines that matter, from Sri Lankan and international sources covering Sri Lanka.
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.1-blue)
 ![Build](https://github.com/pasananishka-create/NewsWire/actions/workflows/build.yml/badge.svg)
 
 ## Features
 
 - **TikTok-style vertical feed** — flick up for the next story, tap to read the full article
 - **Global + Sri Lankan coverage** — global top stories by default, with World, Sri Lanka, Cricket, Politics, Business, Tech, Entertainment and Weather feeds via Google News (`gl=LK`)
-- **Photos on every card** — article images loaded from each source (with a branded gradient fallback)
+- **Photos on every card** — each Google News link is resolved to the real publisher article, then the article's real `og:image` is loaded (with a branded gradient fallback when a source hides its image)
 - **Signature look** — each story gets a unique animated gradient canvas, bold typography, source badge and "time ago"
 - **Addictive touches** — haptic tick on every card change, LIVE pulse, progress counter (`4 / 87`), swipe-up hint
 - **Shimmer loading** deck instead of blank screens
@@ -26,7 +26,7 @@ Download the latest signed APK from the **Releases** page on the right, open it 
 |-----------|------------|
 | Language | Kotlin 2.1 |
 | UI | Jetpack Compose + Material 3 (VerticalPager) |
-| Networking | OkHttp + XmlPullParser (Google News RSS) |
+| Networking | OkHttp + XmlPullParser (Google News RSS) + `Fbv4je` batchexecute link resolver |
 | DI | Hilt |
 | Navigation | Navigation Compose |
 | Min / Target SDK | 26 / 36 |
