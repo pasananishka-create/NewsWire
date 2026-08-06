@@ -40,7 +40,9 @@ jobs:
           EOF
 
       - name: Build release APK
-        run: ./gradlew :app:assembleRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease
 
       - name: Resolve version
         id: version
