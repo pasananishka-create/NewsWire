@@ -24,33 +24,37 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudOff
-import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -60,13 +64,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.newswire.BuildConfig
 import com.newswire.data.model.Article
-import com.newswire.ui.components.ArticleCard
 import com.newswire.ui.components.shimmer
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -75,7 +74,6 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-
     HomeContent(
         state = state,
         onCategorySelect = viewModel::selectCategory,
@@ -86,7 +84,6 @@ fun HomeScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeContent(
     state: HomeUiState,
@@ -96,86 +93,109 @@ private fun HomeContent(
     onArticleClick: (Article) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    val currentState by rememberUpdatedState(state)
+    val pagerState = rememberPagerState(initialPage = 0) { currentState.articles.size }
+    val haptics = LocalHapticFeedback.current
+
+    LaunchedEffect(state.selected) {
+        if (pagerState.currentPage != 0) pagerState.scrollToPage(0)
+    }
+
+    LaunchedEffect(state.articles.size) {
+        val last = state.articles.size - 1
+        if (last >= 0 && pagerState.currentPage > last) {
+            pagerState.scrollToPage(last)
+        }
+    }
+
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage != 0) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f),
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.background,
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        NewsHeader(
-            count = state.articles.size,
-            modifier = Modifier.statusBarsPadding(),
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        CategoryPills(
-            selected = state.selected,
-            onSelect = onCategorySelect,
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
         when {
-            BuildConfig.NEWSAPI_KEY.isBlank() -> ApiKeyMissing(onRetry)
-            state.isLoading && state.articles.isEmpty() -> ShimmerList()
+            state.isLoading && state.articles.isEmpty() -> LoadingDeck()
             state.error != null && state.articles.isEmpty() -> ErrorContent(
-                message = state.error.orEmpty(),
+                message = state.error,
                 onRetry = onRetry,
             )
+            state.articles.isEmpty() -> EmptyContent(onRetry = onRetry)
             else -> {
-                if (state.error != null) {
-                    RefreshErrorBanner(message = state.error)
-                }
-                PullToRefreshBox(
-                    isRefreshing = state.isRefreshing,
-                    onRefresh = onRefresh,
+                VerticalPager(
+                    state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            top = 6.dp,
-                            bottom = 40.dp,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(18.dp),
-                    ) {
-                        itemsIndexed(
-                            items = state.articles,
-                            key = { _, article -> article.url },
-                        ) { index, article ->
-                            ArticleCard(
-                                article = article,
-                                index = index,
-                                onClick = { onArticleClick(article) },
-                            )
-                        }
-                    }
+                    beyondViewportPageCount = 1,
+                ) { page ->
+                    val article = state.articles[page]
+                    StoryCard(
+                        article = article,
+                        onClick = { onArticleClick(article) },
+                    )
                 }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.30f))
+                            )
+                        )
+                )
+
+                DeckFooter(
+                    index = pagerState.currentPage,
+                    count = state.articles.size,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
         }
+
+        DeckTopBar(
+            selected = state.selected,
+            isRefreshing = state.isRefreshing,
+            onCategorySelect = onCategorySelect,
+            onRefresh = onRefresh,
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
     }
 }
 
 @Composable
-private fun NewsHeader(count: Int, modifier: Modifier = Modifier) {
+private fun DeckTopBar(
+    selected: NewsCategory,
+    isRefreshing: Boolean,
+    onCategorySelect: (NewsCategory) -> Unit,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
+            .statusBarsPadding()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                        Color.Transparent,
+                    )
+                )
+            )
+            .padding(top = 6.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
         ) {
             Text(
                 text = buildAnnotatedString {
@@ -184,36 +204,93 @@ private fun NewsHeader(count: Int, modifier: Modifier = Modifier) {
                         append("Wire")
                     }
                 },
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.weight(1f))
             LiveBadge()
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = todayLabel(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (count > 0) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(4.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "$count stories",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                onClick = onRefresh,
+                modifier = Modifier.size(36.dp),
+            ) {
+                if (isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.Refresh,
+                        contentDescription = "Refresh",
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        CategoryPills(
+            selected = selected,
+            onSelect = onCategorySelect,
+        )
+    }
+}
+
+@Composable
+private fun DeckFooter(
+    index: Int,
+    count: Int,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (count > 1) {
+            Text(
+                text = "${index + 1} / $count",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.85f),
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        SwipeHint()
+    }
+}
+
+@Composable
+private fun SwipeHint() {
+    val transition = rememberInfiniteTransition(label = "swipeHint")
+    val dy by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = -9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 700),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "swipeHintY",
+    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "Swipe up",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White.copy(alpha = 0.7f),
+            letterSpacing = 0.6.sp,
+        )
+        Icon(
+            imageVector = Icons.Rounded.ExpandLess,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.7f),
+            modifier = Modifier
+                .size(22.dp)
+                .graphicsLayer { translationY = dy },
+        )
     }
 }
 
@@ -262,7 +339,7 @@ private fun CategoryPills(
 ) {
     LazyRow(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(NewsCategory.entries, key = { it.name }) { category ->
@@ -330,56 +407,58 @@ private fun CategoryPill(
 }
 
 @Composable
-private fun ShimmerList() {
-    val base = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+private fun LoadingDeck() {
+    val base = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
     val highlight = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.9f)
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-    ) {
-        repeat(4) {
-            Surface(
-                shape = RoundedCornerShape(26.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    Column(modifier = Modifier.fillMaxSize()) {
+        repeat(2) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             ) {
-                Column {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 28.dp),
+                ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
+                            .width(150.dp)
+                            .height(14.dp)
+                            .clip(RoundedCornerShape(7.dp))
                             .background(base)
                             .shimmer(base, highlight)
                     )
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.45f)
-                                .height(12.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(base)
-                                .shimmer(base, highlight)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(16.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(base)
-                                .shimmer(base, highlight)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(0.72f)
-                                .height(16.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(base)
-                                .shimmer(base, highlight)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.95f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(base)
+                            .shimmer(base, highlight)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.78f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(base)
+                            .shimmer(base, highlight)
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .height(20.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(base)
+                            .shimmer(base, highlight)
+                    )
                 }
             }
         }
@@ -395,7 +474,7 @@ private fun ErrorContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(horizontal = 40.dp),
     ) {
         Box(
@@ -447,37 +526,29 @@ private fun ErrorContent(
 }
 
 @Composable
-private fun ApiKeyMissing(onRetry: () -> Unit) {
+private fun EmptyContent(onRetry: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(horizontal = 40.dp),
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(84.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Key,
-                contentDescription = null,
-                modifier = Modifier.size(38.dp),
-                tint = MaterialTheme.colorScheme.tertiary,
-            )
-        }
-        Spacer(modifier = Modifier.height(22.dp))
+        Icon(
+            imageVector = Icons.Rounded.CloudOff,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(18.dp))
         Text(
-            text = "API key not configured",
+            text = "No stories yet",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "This build has no NEWSAPI_KEY. Add your free key from newsapi.org in local.properties and rebuild, or set the NEWSAPI_KEY secret for GitHub Actions builds.",
+            text = "Nothing new for this topic right now.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -491,41 +562,7 @@ private fun ApiKeyMissing(onRetry: () -> Unit) {
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
         ) {
-            Text(text = "Retry", style = MaterialTheme.typography.labelLarge)
+            Text(text = "Refresh", style = MaterialTheme.typography.labelLarge)
         }
     }
-}
-
-@Composable
-private fun RefreshErrorBanner(message: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.CloudOff,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.error,
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            maxLines = 1,
-        )
-    }
-}
-
-private fun todayLabel(): String {
-    val today = LocalDate.now()
-    val day = today.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-    val month = today.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-    return "$day, $month ${today.dayOfMonth}"
 }

@@ -1,20 +1,20 @@
 # NewsWire
 
-A premium, high-end Android news reader. Trusted headlines from 150,000+ sources (BBC, Reuters, AP, The Guardian and more) via the free [NewsAPI.org](https://newsapi.org) service — delivered with a polished Material 3 experience.
+A premium, addictive Sri Lankan news app for Android. Fast, full-screen story cards you swipe through like a feed — no lists, no clutter, just headlines that matter, from Sri Lankan and international sources covering Sri Lanka.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![Build](https://github.com/pasananishka-create/NewsWire/actions/workflows/build.yml/badge.svg)
 
 ## Features
 
-- **6 curated categories** — Top, Tech, Business, Entertainment, Health, Science
-- **Premium design** — Midnight dark theme (plus crisp light), custom typography, gradient surfaces
-- **Smooth animations** — animated category pills, staggered card entrances, pulsing LIVE indicator, press-scale feedback, pull-to-refresh
-- **Shimmer loading** skeletons instead of blank screens
-- **In-app article reader** — WebView with live progress bar, fade-in, share and open-in-browser
-- **Source identity** — each outlet gets its own brand color + badge
-- **Smart caching** — each category fetched once per session; pull-to-refresh re-fetches
-- **API-key safe** — key is injected at build time, never hardcoded in source
+- **TikTok-style vertical feed** — flick up for the next story, tap to read the full article
+- **100% Sri Lanka focused** — live headlines via Google News Sri Lanka (`gl=LK`), refreshed on demand
+- **6 categories** — All, Cricket, Politics, Business, Weather, Entertainment
+- **Signature look** — each story gets a unique animated gradient canvas, bold typography, source badge and "time ago"
+- **Addictive touches** — haptic tick on every card change, LIVE pulse, progress counter (`4 / 87`), swipe-up hint
+- **Shimmer loading** deck instead of blank screens
+- **In-app article reader** — WebView with live progress bar, share and open-in-browser
+- **Smart caching** — each category fetched once per session; tap the refresh button for fresh stories
 
 ## Install (APK)
 
@@ -25,28 +25,20 @@ Download the latest signed APK from the **Releases** page on the right, open it 
 | Component | Technology |
 |-----------|------------|
 | Language | Kotlin 2.1 |
-| UI | Jetpack Compose + Material 3 |
-| Networking | Retrofit + OkHttp + kotlinx.serialization |
-| Images | Coil |
+| UI | Jetpack Compose + Material 3 (VerticalPager) |
+| Networking | OkHttp + XmlPullParser (Google News RSS) |
 | DI | Hilt |
 | Navigation | Navigation Compose |
 | Min / Target SDK | 26 / 36 |
 
 ## Getting Started
 
-### 1. Get a free News API key
-
-Sign up at [newsapi.org](https://newsapi.org) → Dashboard → generate an API key.
-The free plan allows 100 requests/day — more than enough for personal use.
-
-### 2. Configure `local.properties`
+### 1. Configure `local.properties`
 
 Create `local.properties` (already git-ignored) in the project root:
 
 ```properties
 sdk.dir=C\:\\Users\\<you>\\AppData\\Local\\Android\\Sdk
-
-NEWSAPI_KEY=your-key-here
 
 # For signing a release APK locally (optional):
 KEYSTORE_PASSWORD=your-keystore-password
@@ -54,7 +46,9 @@ KEY_ALIAS=newswire
 KEY_PASSWORD=your-key-password
 ```
 
-### 3. Build
+No API key is needed — the feed comes from the free Google News RSS endpoints.
+
+### 2. Build
 
 Requires a JDK 17 (with `jlink`, e.g. Temurin) and the Android SDK.
 
@@ -70,7 +64,6 @@ This repo ships a workflow (`.github/workflows/build.yml`) that builds a **signe
 
 | Secret | Value |
 |--------|-------|
-| `NEWSAPI_KEY` | your free NewsAPI.org key |
 | `KEYSTORE_BASE64` | base64 of `release-key.jks` |
 | `KEYSTORE_PASSWORD` | keystore password |
 | `KEY_ALIAS` | `newswire` |
@@ -94,12 +87,12 @@ NewsWire/
 ├── app/
 │   ├── build.gradle.kts
 │   └── src/main/java/com/newswire/
-│       ├── data/                 models, Retrofit service, repository
+│       ├── data/                 models, RSS parser, repository
 │       ├── di/                   Hilt module
 │       └── ui/
 │           ├── theme/            premium Material 3 themes
-│           ├── components/       article cards, shimmer, badges
-│           ├── home/             category tabs + headline feed
+│           ├── components/       shimmer, time-ago helpers
+│           ├── home/             vertical story deck + categories
 │           └── reader/           in-app WebView reader
 ├── gradle/libs.versions.toml
 └── release-key.jks               (git-ignored)

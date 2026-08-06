@@ -8,7 +8,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.kotlin.serialization)
 }
 
 val localProps = Properties().apply {
@@ -21,7 +20,6 @@ fun buildProp(name: String): String =
         ?: System.getenv(name)
         ?: ""
 
-val newsApiKey: String = buildProp("NEWSAPI_KEY")
 val releaseStorePassword: String = buildProp("KEYSTORE_PASSWORD")
 val releaseKeyAlias: String = buildProp("KEY_ALIAS")
 val releaseKeyPassword: String = buildProp("KEY_PASSWORD")
@@ -34,10 +32,8 @@ android {
         applicationId = "com.newswire"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
-
-        buildConfigField("String", "NEWSAPI_KEY", "\"$newsApiKey\"")
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     signingConfigs {
@@ -109,11 +105,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     // Networking
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.serialization.converter)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
-    implementation(libs.kotlinx.serialization.json)
 
     // Image loading
     implementation(libs.coil.compose)

@@ -31,7 +31,7 @@ fun NewsWireApp(modifier: Modifier = Modifier) {
             HomeScreen(
                 onArticleClick = { article ->
                     navController.navigate(
-                        "reader?url=${Uri.encode(article.url)}&title=${Uri.encode(article.title)}"
+                        "reader?url=${Uri.encode(article.link)}&title=${Uri.encode(article.title)}"
                     )
                 },
             )

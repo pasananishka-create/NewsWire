@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
-    val selected: NewsCategory = NewsCategory.TOP,
+    val selected: NewsCategory = NewsCategory.ALL,
     val articles: List<Article> = emptyList(),
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -56,7 +56,7 @@ class HomeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                val articles = repository.getHeadlines(category.api)
+                val articles = repository.getHeadlines(category.query)
                 cache[category] = articles
                 _uiState.update {
                     it.copy(
@@ -87,7 +87,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isRefreshing = true, error = null) }
         viewModelScope.launch {
             try {
-                val articles = repository.getHeadlines(category.api)
+                val articles = repository.getHeadlines(category.query)
                 cache[category] = articles
                 _uiState.update {
                     it.copy(
