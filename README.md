@@ -2,14 +2,14 @@
 
 A premium, addictive Sri Lankan news app for Android. Fast, full-screen story cards you swipe through like a feed — no lists, no clutter, just headlines that matter, from Sri Lankan and international sources covering Sri Lanka.
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![Build](https://github.com/pasananishka-create/NewsWire/actions/workflows/build.yml/badge.svg)
 
 ## Features
 
 - **TikTok-style vertical feed** — flick up for the next story, tap to read the full article
-- **100% Sri Lanka focused** — live headlines via Google News Sri Lanka (`gl=LK`), refreshed on demand
-- **6 categories** — All, Cricket, Politics, Business, Weather, Entertainment
+- **Global + Sri Lankan coverage** — global top stories by default, with World, Sri Lanka, Cricket, Politics, Business, Tech, Entertainment and Weather feeds via Google News (`gl=LK`)
+- **Photos on every card** — article images loaded from each source (with a branded gradient fallback)
 - **Signature look** — each story gets a unique animated gradient canvas, bold typography, source badge and "time ago"
 - **Addictive touches** — haptic tick on every card change, LIVE pulse, progress counter (`4 / 87`), swipe-up hint
 - **Shimmer loading** deck instead of blank screens

@@ -28,7 +28,11 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _articleImages = MutableStateFlow<Map<String, String>>(emptyMap())
+    val articleImages: StateFlow<Map<String, String>> = _articleImages.asStateFlow()
+
     private val cache = mutableMapOf<NewsCategory, List<Article>>()
+    private val pendingImages = mutableSetOf<String>()
     private var fetching = false
 
     init {
@@ -102,6 +106,21 @@ class HomeViewModel @Inject constructor(
                 }
             } finally {
                 fetching = false
+            }
+        }
+    }
+
+    fun ensureImage(link: String) {
+        if (link.isBlank() || _articleImages.value.containsKey(link)) return
+        if (!pendingImages.add(link)) return
+        viewModelScope.launch {
+            try {
+                val url = repository.fetchImageUrl(link)
+                if (!url.isNullOrBlank()) {
+                    _articleImages.update { it + (link to url) }
+                }
+            } finally {
+                pendingImages.remove(link)
             }
         }
     }

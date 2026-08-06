@@ -32,10 +32,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.newswire.data.model.Article
 import com.newswire.ui.components.formatTimeAgo
 import java.util.Locale
@@ -69,6 +71,7 @@ private fun initials(name: String): String {
 @Composable
 fun StoryCard(
     article: Article,
+    imageUrl: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -98,14 +101,28 @@ fun StoryCard(
                 onClick = onClick,
             ),
     ) {
-        DecorativeCircle(
-            spec = circleA,
-            color = Color.White.copy(alpha = 0.05f),
-        )
-        DecorativeCircle(
-            spec = circleB,
-            color = Color.White.copy(alpha = 0.04f),
-        )
+        if (imageUrl.isNullOrBlank()) {
+            DecorativeCircle(
+                spec = circleA,
+                color = Color.White.copy(alpha = 0.05f),
+            )
+            DecorativeCircle(
+                spec = circleB,
+                color = Color.White.copy(alpha = 0.04f),
+            )
+        } else {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.25f))
+            )
+        }
 
         Box(
             modifier = Modifier

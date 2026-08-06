@@ -74,11 +74,14 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val images by viewModel.articleImages.collectAsStateWithLifecycle()
     HomeContent(
         state = state,
+        images = images,
         onCategorySelect = viewModel::selectCategory,
         onRefresh = viewModel::refresh,
         onRetry = viewModel::load,
+        onEnsureImage = viewModel::ensureImage,
         onArticleClick = onArticleClick,
         modifier = modifier,
     )
@@ -87,9 +90,11 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     state: HomeUiState,
+    images: Map<String, String>,
     onCategorySelect: (NewsCategory) -> Unit,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
+    onEnsureImage: (String) -> Unit,
     onArticleClick: (Article) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -111,6 +116,14 @@ private fun HomeContent(
     LaunchedEffect(pagerState.currentPage) {
         if (pagerState.currentPage != 0) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+        val list = state.articles
+        if (list.isNotEmpty()) {
+            val range = (pagerState.currentPage - 1).coerceAtLeast(0)..
+                (pagerState.currentPage + 1).coerceAtMost(list.lastIndex)
+            for (page in range) {
+                onEnsureImage(list[page].link)
+            }
         }
     }
 
@@ -135,6 +148,7 @@ private fun HomeContent(
                     val article = state.articles[page]
                     StoryCard(
                         article = article,
+                        imageUrl = images[article.link],
                         onClick = { onArticleClick(article) },
                     )
                 }
