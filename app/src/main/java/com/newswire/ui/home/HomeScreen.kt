@@ -64,12 +64,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.newswire.data.model.Article
+import com.newswire.data.model.FeedItem
 import com.newswire.ui.components.shimmer
 
 @Composable
 fun HomeScreen(
-    onArticleClick: (Article) -> Unit,
+    onItemClick: (FeedItem) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -82,7 +82,8 @@ fun HomeScreen(
         onRefresh = viewModel::refresh,
         onRetry = viewModel::load,
         onEnsureImage = viewModel::ensureImage,
-        onArticleClick = onArticleClick,
+        onPageAdvanced = viewModel::onPageAdvanced,
+        onItemClick = onItemClick,
         modifier = modifier,
     )
 }
@@ -95,34 +96,38 @@ private fun HomeContent(
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
     onEnsureImage: (String) -> Unit,
-    onArticleClick: (Article) -> Unit,
+    onPageAdvanced: (Int) -> Unit,
+    onItemClick: (FeedItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentState by rememberUpdatedState(state)
-    val pagerState = rememberPagerState(initialPage = 0) { currentState.articles.size }
+    val pagerState = rememberPagerState(
+        initialPage = state.restorePageIndex.coerceAtLeast(0),
+    ) { currentState.items.size }
     val haptics = LocalHapticFeedback.current
 
     LaunchedEffect(state.selected) {
         if (pagerState.currentPage != 0) pagerState.scrollToPage(0)
     }
 
-    LaunchedEffect(state.articles.size) {
-        val last = state.articles.size - 1
-        if (last >= 0 && pagerState.currentPage > last) {
-            pagerState.scrollToPage(last)
+    LaunchedEffect(pagerState.currentPage) {
+        val page = pagerState.currentPage
+        if (page > 0) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onPageAdvanced(page)
+            pagerState.scrollToPage(0)
         }
     }
 
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != 0) {
-            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        }
-        val list = state.articles
-        if (list.isNotEmpty()) {
-            val range = (pagerState.currentPage - 1).coerceAtLeast(0)..
-                (pagerState.currentPage + 1).coerceAtMost(list.lastIndex)
-            for (page in range) {
-                onEnsureImage(list[page].link)
+    LaunchedEffect(pagerState.currentPage, state.items.size) {
+        val items = state.items
+        if (items.isEmpty()) return@LaunchedEffect
+        val start = pagerState.currentPage.coerceIn(0, items.lastIndex)
+        val end = (start + 1).coerceAtMost(items.lastIndex)
+        for (page in start..end) {
+            val item = items[page]
+            if (item is FeedItem.News) {
+                onEnsureImage(item.article.link)
             }
         }
     }
@@ -133,24 +138,29 @@ private fun HomeContent(
             .background(MaterialTheme.colorScheme.background),
     ) {
         when {
-            state.isLoading && state.articles.isEmpty() -> LoadingDeck()
-            state.error != null && state.articles.isEmpty() -> ErrorContent(
+            state.isLoading && state.items.isEmpty() -> LoadingDeck()
+            state.error != null && state.items.isEmpty() -> ErrorContent(
                 message = state.error,
                 onRetry = onRetry,
             )
-            state.articles.isEmpty() -> EmptyContent(onRetry = onRetry)
+            state.items.isEmpty() -> EmptyContent(onRetry = onRetry)
             else -> {
                 VerticalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     beyondViewportPageCount = 1,
                 ) { page ->
-                    val article = state.articles[page]
-                    StoryCard(
-                        article = article,
-                        imageUrl = images[article.link],
-                        onClick = { onArticleClick(article) },
-                    )
+                    when (val item = state.items[page]) {
+                        is FeedItem.News -> StoryCard(
+                            article = item.article,
+                            imageUrl = images[item.article.link],
+                            onClick = { onItemClick(item) },
+                        )
+                        is FeedItem.Fact -> FactCard(
+                            fact = item.fact,
+                            onClick = { onItemClick(item) },
+                        )
+                    }
                 }
 
                 Box(
@@ -166,8 +176,7 @@ private fun HomeContent(
                 )
 
                 DeckFooter(
-                    index = pagerState.currentPage,
-                    count = state.articles.size,
+                    count = state.items.size,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -255,7 +264,6 @@ private fun DeckTopBar(
 
 @Composable
 private fun DeckFooter(
-    index: Int,
     count: Int,
     modifier: Modifier = Modifier,
 ) {
@@ -267,7 +275,7 @@ private fun DeckFooter(
     ) {
         if (count > 1) {
             Text(
-                text = "${index + 1} / $count",
+                text = "$count stories",
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.White.copy(alpha = 0.85f),
                 fontWeight = FontWeight.SemiBold,

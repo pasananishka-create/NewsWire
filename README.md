@@ -2,19 +2,23 @@
 
 A premium, addictive Sri Lankan news app for Android. Fast, full-screen story cards you swipe through like a feed — no lists, no clutter, just headlines that matter, from Sri Lankan and international sources covering Sri Lanka.
 
-![Version](https://img.shields.io/badge/version-1.2.1-blue)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
 ![Build](https://github.com/pasananishka-create/NewsWire/actions/workflows/build.yml/badge.svg)
 
 ## Features
 
 - **TikTok-style vertical feed** — flick up for the next story, tap to read the full article
+- **Fun facts mixed in** — a live "Did you know?" fact card every few stories (uselessfacts API), never repeated
+- **No repeats** — once you swipe past a story it's hidden and never shown again (across refreshes and restarts)
+- **Remembers where you left off** — close the app and come back: same category, same card
+- **Auto-refresh** — the feed tops itself up with fresh stories every 30 seconds while you're browsing
 - **Global + Sri Lankan coverage** — global top stories by default, with World, Sri Lanka, Cricket, Politics, Business, Tech, Entertainment and Weather feeds via Google News (`gl=LK`)
 - **Photos on every card** — each Google News link is resolved to the real publisher article, then the article's real `og:image` is loaded (with a branded gradient fallback when a source hides its image)
 - **Signature look** — each story gets a unique animated gradient canvas, bold typography, source badge and "time ago"
-- **Addictive touches** — haptic tick on every card change, LIVE pulse, progress counter (`4 / 87`), swipe-up hint
+- **Addictive touches** — haptic tick on every card change, LIVE pulse, remaining-stories counter, swipe-up hint
 - **Shimmer loading** deck instead of blank screens
 - **In-app article reader** — WebView with live progress bar, share and open-in-browser
-- **Smart caching** — each category fetched once per session; tap the refresh button for fresh stories
+- **Lightweight** — stories are fetched on demand and deduplicated; seen stories are pruned so the feed never feels stale
 
 ## Install (APK)
 

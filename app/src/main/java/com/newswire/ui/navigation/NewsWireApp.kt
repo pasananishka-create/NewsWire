@@ -8,19 +8,18 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.newswire.data.model.FeedItem
 import com.newswire.ui.home.HomeScreen
 import com.newswire.ui.reader.ArticleReaderScreen
 
 @Composable
 fun NewsWireApp(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    val context = LocalContext.current
 
     NavHost(
         navController = navController,
@@ -29,10 +28,17 @@ fun NewsWireApp(modifier: Modifier = Modifier) {
     ) {
         composable(route = "home") {
             HomeScreen(
-                onArticleClick = { article ->
-                    navController.navigate(
-                        "reader?url=${Uri.encode(article.link)}&title=${Uri.encode(article.title)}"
-                    )
+                onItemClick = { item ->
+                    when (item) {
+                        is FeedItem.News -> navController.navigate(
+                            "reader?url=${Uri.encode(item.article.link)}" +
+                                "&title=${Uri.encode(item.article.title)}"
+                        )
+                        is FeedItem.Fact -> navController.navigate(
+                            "reader?url=${Uri.encode(item.fact.permalink)}" +
+                                "&title=${Uri.encode("Fun Fact")}"
+                        )
+                    }
                 },
             )
         }
